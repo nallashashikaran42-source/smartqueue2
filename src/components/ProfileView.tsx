@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, KeyRound, LogOut, CheckCircle2, ShieldCheck, Camera } from 'lucide-react';
+import { auth, syncUserToFirestore } from '../firebase';
 import { api, type AuthUser } from '../services/api';
 
 interface ProfileViewProps {
@@ -69,6 +70,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         phone: phone.trim(),
         profilePhoto,
       });
+      if (auth.currentUser) {
+        await syncUserToFirestore(auth.currentUser, res.user).catch(() => undefined);
+      }
       onUserUpdated(res.user);
       setProfileStatus({ type: 'success', text: 'Profile updated successfully.' });
       onNotify('Profile saved');
@@ -188,6 +192,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span className="font-mono">ID: {currentUser.id}</span>
               <span aria-hidden="true">·</span>
               <span>Joined {memberSince}</span>
+              {currentUser.authProvider === 'google' && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="font-semibold text-emerald-700">Google Auth Linked</span>
+                </>
+              )}
             </div>
           </div>
         </div>

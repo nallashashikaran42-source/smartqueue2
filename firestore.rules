@@ -1,0 +1,233 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'shahsikarnann@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'role', 'accountStatus', 'trustScore', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'photoURL', 'role', 'accountStatus', 'trustScore', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 120
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 2048))
+        && data.role in ['citizen', 'operator', 'admin']
+        && data.accountStatus in ['active', 'inactive']
+        && data.trustScore is number
+        && data.trustScore >= 0
+        && data.trustScore <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivateInfo(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'phone', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && data.email is string
+        && data.email.size() >= 3
+        && data.email.size() <= 254
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 32))
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserTicket(data, userId, ticketId) {
+      return data.keys().hasAll(['tokenId', 'uid', 'facilityId', 'facilityName', 'queueId', 'queueName', 'status', 'joinedAt', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['tokenId', 'uid', 'facilityId', 'facilityName', 'queueId', 'queueName', 'status', 'joinedAt', 'createdAt', 'updatedAt'])
+        && isValidId(data.tokenId)
+        && data.tokenId.size() <= 64
+        && data.tokenId == ticketId
+        && isValidId(data.uid)
+        && data.uid == userId
+        && isValidId(data.facilityId)
+        && data.facilityId.size() <= 64
+        && data.facilityName is string
+        && data.facilityName.size() >= 1
+        && data.facilityName.size() <= 120
+        && isValidId(data.queueId)
+        && data.queueId.size() <= 64
+        && data.queueName is string
+        && data.queueName.size() >= 1
+        && data.queueName.size() <= 120
+        && data.status in ['Waiting', 'Called', 'Serving', 'Grace', 'Completed', 'Cancelled', 'Skipped', 'NoShow']
+        && data.joinedAt is string
+        && data.joinedAt.size() >= 1
+        && data.joinedAt.size() <= 64
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdminMarker(data, userId) {
+      return data.keys().hasAll(['uid', 'grantedBy', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'grantedBy', 'createdAt'])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && isValidId(data.grantedBy)
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (isAdmin() || resource.data.uid == request.auth.uid);
+
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            request.auth.uid == userId
+            && incoming().role == 'citizen'
+            && incoming().accountStatus == 'active'
+            && incoming().trustScore == 95
+          )
+        );
+
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            request.auth.uid == userId
+            && existing().accountStatus == 'active'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(userId);
+
+      match /private/{docId} {
+        allow get: if isSignedIn() && isValidId(userId) && docId == 'info' && (request.auth.uid == userId || isAdmin());
+        allow list: if false;
+
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && docId == 'info'
+          && isValidUserPrivateInfo(incoming(), userId)
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (request.auth.uid == userId && incoming().email == request.auth.token.email)
+          )
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && get(/databases/$(database)/documents/users/$(userId)).data.accountStatus == 'active';
+
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && docId == 'info'
+          && isValidUserPrivateInfo(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (
+              request.auth.uid == userId
+              && incoming().email == existing().email
+              && incoming().diff(existing()).affectedKeys().hasOnly(['phone', 'updatedAt'])
+            )
+          )
+          && get(/databases/$(database)/documents/users/$(userId)).data.accountStatus == 'active';
+
+        allow delete: if isAdmin() && isValidId(userId) && docId == 'info';
+      }
+
+      match /tickets/{ticketId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(ticketId) && (
+          isAdmin() ||
+          (request.auth.uid == userId && resource.data.uid == request.auth.uid)
+        );
+        allow list: if isSignedIn() && (
+          isAdmin() ||
+          (request.auth.uid == userId && resource.data.uid == request.auth.uid)
+        );
+
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(ticketId)
+          && ticketId.size() <= 64
+          && isValidUserTicket(incoming(), userId, ticketId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (request.auth.uid == userId && incoming().status == 'Waiting')
+          )
+          && get(/databases/$(database)/documents/users/$(userId)).data.accountStatus == 'active';
+
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(ticketId)
+          && isValidUserTicket(incoming(), userId, ticketId)
+          && incoming().uid == existing().uid
+          && incoming().tokenId == existing().tokenId
+          && incoming().facilityId == existing().facilityId
+          && incoming().queueId == existing().queueId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (
+              request.auth.uid == userId
+              && !(existing().status in ['Completed', 'Cancelled', 'Skipped', 'NoShow'])
+              && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+              && incoming().status in ['Waiting', 'Called', 'Serving', 'Grace', 'Completed', 'Cancelled']
+            )
+          )
+          && get(/databases/$(database)/documents/users/$(userId)).data.accountStatus == 'active';
+
+        allow delete: if isAdmin() && isValidId(userId) && isValidId(ticketId);
+      }
+    }
+
+    match /admins/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isAdmin()
+        && isValidId(userId)
+        && isValidAdminMarker(incoming(), userId)
+        && incoming().grantedBy == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+  }
+}

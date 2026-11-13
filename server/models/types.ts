@@ -28,6 +28,8 @@ export interface UserRecord {
   role: UserRole;
   accountStatus: AccountStatus;
   profilePhoto?: string;
+  firebaseUid?: string;
+  authProvider?: 'local' | 'google';
   organisationId?: string;
   assignedFacilityId?: string;
   assignedDepartmentId?: string;
@@ -47,6 +49,8 @@ export interface PublicUser {
   role: UserRole;
   accountStatus: AccountStatus;
   profilePhoto?: string;
+  firebaseUid?: string;
+  authProvider?: 'local' | 'google';
   organisationId?: string;
   assignedFacilityId?: string;
   assignedDepartmentId?: string;

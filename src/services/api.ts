@@ -26,6 +26,8 @@ export interface AuthUser {
   role: UserRole;
   accountStatus: AccountStatus;
   profilePhoto?: string;
+  firebaseUid?: string;
+  authProvider?: 'local' | 'google';
   organisationId?: string;
   assignedFacilityId?: string;
   assignedDepartmentId?: string;
@@ -523,6 +525,21 @@ export const api = {
   }): Promise<{ token: string; refreshToken: string; user: AuthUser }> {
     const res = await apiRequest<{ token: string; refreshToken: string; user: AuthUser }>(
       '/api/auth/login',
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }
+    );
+    setStoredTokens(res.token, res.refreshToken);
+    return res;
+  },
+
+  async loginWithGoogle(body: {
+    idToken: string;
+    expectedRole?: UserRole;
+  }): Promise<{ token: string; refreshToken: string; user: AuthUser }> {
+    const res = await apiRequest<{ token: string; refreshToken: string; user: AuthUser }>(
+      '/api/auth/firebase-google',
       {
         method: 'POST',
         body: JSON.stringify(body),

@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from './firebase';
 import { api, getStoredAuthToken, type AuthUser, type UserRole } from './services/api';
 import { AuthGate } from './components/AuthGate';
 import { CitizenDashboard, type CitizenSection } from './components/citizen/CitizenDashboard';
@@ -125,6 +127,14 @@ export default function App() {
     [showToast]
   );
 
+  // Subscribe to Firebase auth state so Firestore listeners know auth readiness
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, () => {
+      // Auth state synchronized with Firebase SDK
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Check session on startup
   useEffect(() => {
     let active = true;
@@ -201,7 +211,7 @@ export default function App() {
   );
 
   const handleLogout = useCallback(async () => {
-    await api.logout();
+    await Promise.all([api.logout(), signOut(auth).catch(() => undefined)]);
     setCurrentUser(null);
     setActiveSection('home');
     window.history.replaceState(null, '', '/login');

@@ -1,0 +1,200 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public-safe user profile and role assignment record without PII.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID matching the document ID.",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Optional avatar URL.",
+          "maxLength": 2048
+        },
+        "role": {
+          "type": "string",
+          "description": "Assigned SmartQueue RBAC role.",
+          "enum": ["citizen", "operator", "admin"]
+        },
+        "accountStatus": {
+          "type": "string",
+          "description": "Account activation status.",
+          "enum": ["active", "inactive"]
+        },
+        "trustScore": {
+          "type": "number",
+          "description": "Fairness trust score between 0 and 100."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": ["uid", "displayName", "role", "accountStatus", "trustScore", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Isolated PII record for a user (email and phone).",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified user email address.",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "phone": {
+          "type": "string",
+          "description": "Optional phone number.",
+          "maxLength": 32
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": ["uid", "email", "updatedAt"]
+    },
+    "UserTicket": {
+      "title": "UserTicket",
+      "description": "Citizen virtual queue ticket synced to Firestore.",
+      "type": "object",
+      "properties": {
+        "tokenId": {
+          "type": "string",
+          "description": "Token code identifier (e.g., A-42).",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "uid": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "facilityId": {
+          "type": "string",
+          "description": "Facility ID.",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "facilityName": {
+          "type": "string",
+          "description": "Human-readable facility name.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "queueId": {
+          "type": "string",
+          "description": "Queue ID.",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "queueName": {
+          "type": "string",
+          "description": "Human-readable queue name.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "status": {
+          "type": "string",
+          "description": "Lifecycle status of the queue token.",
+          "enum": ["Waiting", "Called", "Serving", "Grace", "Completed", "Cancelled", "Skipped", "NoShow"]
+        },
+        "joinedAt": {
+          "type": "string",
+          "description": "Display join time.",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": ["tokenId", "uid", "facilityId", "facilityName", "queueId", "queueName", "status", "joinedAt", "createdAt", "updatedAt"]
+    },
+    "AdminRoleMarker": {
+      "title": "AdminRoleMarker",
+      "description": "Trusted marker document granting Firestore admin privileges.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Admin Firebase Auth UID.",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "grantedBy": {
+          "type": "string",
+          "description": "Admin UID that granted access.",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        }
+      },
+      "required": ["uid", "grantedBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Public-safe user profile documents indexed by Firebase UID."
+    },
+    "/users/{userId}/private/info": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Isolated PII (email, phone) accessible only to the owning user or an admin."
+    },
+    "/users/{userId}/tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/UserTicket" },
+      "description": "Virtual queue tickets owned by the user."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRoleMarker" },
+      "description": "Trusted administrator marker documents."
+    }
+  }
+}

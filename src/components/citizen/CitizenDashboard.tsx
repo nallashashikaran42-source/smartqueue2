@@ -26,6 +26,7 @@ import {
   type NotificationItem,
 } from '../../services/api';
 import { FREE_TIME_ACTIVITIES, type EntryChannel } from '../../data/smartQueueData';
+import { auth, syncTicketToFirestore } from '../../firebase';
 import { useQueueSocket, type QueueWsMessage } from '../../hooks/useQueueSocket';
 import { DashboardShell, type SidebarNavItem } from '../DashboardShell';
 import { NotificationsView } from '../NotificationsView';
@@ -208,6 +209,13 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
       });
       setSnapshot(res.snapshot);
       setActiveToken(res.token);
+      if (auth.currentUser) {
+        await syncTicketToFirestore(
+          auth.currentUser.uid,
+          res.token,
+          currentCenter.facility.name
+        ).catch(() => undefined);
+      }
       onToast(`Token ${res.token.tokenId} booked successfully`);
       await loadAll();
       onNavigate('my-queue');
@@ -221,9 +229,17 @@ export const CitizenDashboard: React.FC<CitizenDashboardProps> = ({
   const handleCancelActiveToken = async () => {
     if (!activeToken) return;
     try {
+      const cancelledToken = { ...activeToken, status: 'Cancelled' as const };
       const res = await api.cancelToken(activeToken.facilityId, activeToken.tokenId);
       setSnapshot(res.snapshot);
       setActiveToken(null);
+      if (auth.currentUser) {
+        await syncTicketToFirestore(
+          auth.currentUser.uid,
+          cancelledToken,
+          activeToken.facilityName || currentCenter?.facility.name || 'Service Center'
+        ).catch(() => undefined);
+      }
       onToast(`Token ${activeToken.tokenId} cancelled`);
       await loadAll();
     } catch (err) {

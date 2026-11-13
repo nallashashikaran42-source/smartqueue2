@@ -12,6 +12,7 @@ import {
   verifyPassword,
   verifyRefreshToken,
 } from '../middleware/authMiddleware.ts';
+import { verifyFirebaseIdToken } from '../services/firebaseAuth.ts';
 import type { UserRecord } from '../models/types.ts';
 
 export const authRoutes = Router();
@@ -137,6 +138,162 @@ authRoutes.post('/login', (req, res) => {
 
   const { token, refreshToken } = issueSessionTokens(user);
   res.json({
+    token,
+    refreshToken,
+    user: toPublicUser(user),
+  });
+});
+
+const BOOTSTRAPPED_ADMIN_EMAIL = 'shahsikarnann@gmail.com';
+
+authRoutes.post('/firebase-google', async (req, res) => {
+  const { idToken, expectedRole } = (req.body || {}) as {
+    idToken?: string;
+    expectedRole?: string;
+  };
+
+  if (!idToken) {
+    res.status(400).json({ error: 'Firebase ID token is required.' });
+    return;
+  }
+
+  let verified;
+  try {
+    verified = await verifyFirebaseIdToken(idToken);
+  } catch (err) {
+    res.status(401).json({
+      error: err instanceof Error ? err.message : 'Unable to verify Google authentication token.',
+    });
+    return;
+  }
+
+  const db = dbStore.getState();
+  let user = db.users.find(
+    (u) =>
+      u.firebaseUid === verified.uid ||
+      u.email.toLowerCase() === verified.email.toLowerCase()
+  );
+
+  if (user) {
+    if (user.accountStatus === 'inactive') {
+      res.status(403).json({
+        error: 'Your account has been deactivated. Contact an administrator.',
+      });
+      return;
+    }
+
+    const actualRole = normalizeRole(user.role);
+    if (expectedRole) {
+      const requestedRole = normalizeRole(expectedRole);
+      if (requestedRole !== actualRole) {
+        const roleLabels = {
+          citizen: 'Citizen / Patient',
+          operator: 'Token Operator',
+          admin: 'Administrator',
+        } as const;
+        res.status(403).json({
+          error: `This Google account is registered under the ${roleLabels[actualRole]} role. Please sign in through the ${roleLabels[actualRole]} tab.`,
+          suggestedRole: actualRole,
+        });
+        return;
+      }
+    }
+
+    let updated = false;
+    if (user.firebaseUid !== verified.uid) {
+      user.firebaseUid = verified.uid;
+      updated = true;
+    }
+    if (user.authProvider !== 'google') {
+      user.authProvider = 'google';
+      updated = true;
+    }
+    if (!user.profilePhoto && verified.picture) {
+      user.profilePhoto = verified.picture;
+      updated = true;
+    }
+    if (updated) {
+      dbStore.save();
+    }
+
+    const { token, refreshToken } = issueSessionTokens(user);
+    res.json({
+      token,
+      refreshToken,
+      user: toPublicUser(user),
+    });
+    return;
+  }
+
+  const requestedRole = expectedRole ? normalizeRole(expectedRole) : 'citizen';
+
+  if (requestedRole === 'operator') {
+    res.status(403).json({
+      error:
+        'No Token Operator account is provisioned for this Google email. Ask an Administrator to create your Operator account first.',
+    });
+    return;
+  }
+
+  if (requestedRole === 'admin' && verified.email !== BOOTSTRAPPED_ADMIN_EMAIL) {
+    res.status(403).json({
+      error:
+        'No Administrator account is provisioned for this Google email. Public registration is disabled for administrative access.',
+    });
+    return;
+  }
+
+  const isBootstrappedAdmin =
+    requestedRole === 'admin' && verified.email === BOOTSTRAPPED_ADMIN_EMAIL;
+
+  const displayName =
+    verified.name && verified.name.trim().length > 0
+      ? verified.name.trim()
+      : verified.email.split('@')[0];
+
+  user = {
+    id: `usr-${crypto.randomUUID().slice(0, 8)}`,
+    name: displayName,
+    email: verified.email,
+    role: isBootstrappedAdmin ? 'admin' : 'citizen',
+    accountStatus: 'active',
+    profilePhoto: verified.picture || undefined,
+    firebaseUid: verified.uid,
+    authProvider: 'google',
+    organisationId: isBootstrappedAdmin ? 'org-ap-health' : undefined,
+    shift: isBootstrappedAdmin ? 'Full Day Admin' : undefined,
+    permissions: isBootstrappedAdmin ? ['all'] : undefined,
+    trustScore: isBootstrappedAdmin ? 100 : 95,
+    passwordHash: hashPassword(crypto.randomBytes(24).toString('hex')),
+    createdAt: new Date().toISOString(),
+  };
+
+  db.users.push(user);
+  db.auditLogs.unshift({
+    id: `log-${crypto.randomUUID().slice(0, 8)}`,
+    actorId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    action: isBootstrappedAdmin ? 'ADMIN_GOOGLE_BOOTSTRAPPED' : 'GOOGLE_SIGNIN_REGISTERED',
+    targetType: 'user',
+    targetId: user.id,
+    details: `${user.name} (${user.email}) signed in with Google as ${user.role}.`,
+    timestamp: new Date().toISOString(),
+  });
+  db.notifications.unshift({
+    id: `notif-${crypto.randomUUID().slice(0, 8)}`,
+    facilityId: 'vja-hospital',
+    userId: user.id,
+    title: 'Google Account Connected',
+    message: `Welcome ${user.name}! Your SmartQueue account is linked with Google Auth.`,
+    category: 'account',
+    channel: 'in-app',
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  });
+
+  const { token, refreshToken } = issueSessionTokens(user);
+  res.status(201).json({
     token,
     refreshToken,
     user: toPublicUser(user),
