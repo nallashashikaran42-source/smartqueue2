@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartQueue – Don't Wait. Use the Wait.</title>
+  <style>
+    :root {
+      --primary: #028090;
+      --primary-dark: #00606e;
+      --primary-light: #e0f2f1;
+      --secondary: #00a896;
+      --navy: #0b2545;
+      --navy-light: #134074;
+      --amber: #f4a261;
+      --amber-dark: #c86b28;
+      --red: #e63946;
+      --green: #2a9d8f;
+      --bg: #f3f6f9;
+      --surface: #ffffff;
+      --text: #1d2d44;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow: 0 4px 16px rgba(11, 37, 69, 0.06);
+      --shadow-hover: 0 10px 24px rgba(11, 37, 69, 0.1);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Responsive Shell */
+    .app-shell {
+      width: 100%;
+      max-width: 1320px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Top Navigation */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+
+    .nav-container {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .nav-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-badge {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--primary), var(--navy));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .brand-text h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-text p {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .meta-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .location-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f8fafc;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      font-size: 0.76rem;
+      color: var(--navy-light);
+      font-weight: 600;
+    }
+
+    .trust-pill {
+      background: #eef8f6;
+      color: var(--green);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.76rem;
+      border: 1px solid #b2dfdb;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .lang-select {
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      padding: 6px 10px;
+      font-weight: 600;
+      color: var(--navy);
+      cursor: pointer;
+      outline: none;
+    }
+
+    .help-icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--navy-light);
+    }
+
+    /* Role Switcher */
+    .role-switcher {
+      display: inline-flex;
+      background: #edf2f7;
+      padding: 4px;
+      border-radius: 12px;
+      gap: 4px;
+      width: 100%;
+    }
+
+    .role-btn {
+      flex: 1;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.86rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .role-btn.active {
+      background: var(--surface);
+      color: var(--navy);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    @media (min-width: 900px) {
+      .nav-container {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 24px;
+      }
+      .role-switcher {
+        width: auto;
+      }
+      .role-btn {
+        flex: initial;
+      }
+    }
+
+    /* Content Area */
+    main {
+      flex: 1;
+      padding: 16px;
+      max-width: 1320px;
+      width: 100%;
+      margin: 0 auto;
+      padding-bottom: 96px;
+    }
+
+    @media (min-width: 900px) {
+      main {
+        padding: 24px;
+        padding-bottom: 96px;
+      }
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--navy);
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 992px) {
+      .dashboard-grid {
+        grid-template-columns: 420px 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      .org-dashboard-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+    }
+
+    /* Service Selector */
+    .services-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    @media (min-width: 600px) {
+      .services-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .service-card {
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      background: #fafbfc;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s ease;
+    }
+
+    .service-card:hover, .service-card.selected {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      transform: translateY(-2px);
+    }
+
+    .service-card h4 {
+      font-size: 0.95rem;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+
+    .service-card span {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      display: block;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(2, 128, 144, 0.25);
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .offline-box {
+      background: #f8fafc;
+      border-left: 4px solid var(--navy-light);
+      padding: 12px 14px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      margin-top: 14px;
+      line-height: 1.45;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .offline-box:hover {
+      background: #edf2f7;
+    }
+
+    .offline-box b {
+      color: var(--navy);
+    }
+
+    /* Live Token Card */
+    .token-hero {
+      background: linear-gradient(135deg, var(--navy), #14365d);
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 22px 18px;
+      text-align: center;
+      position: relative;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 25px rgba(11, 37, 69, 0.2);
+    }
+
+    .token-hero .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.15);
+      font-size: 0.72rem;
+      padding: 4px 12px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .my-token-num {
+      font-size: 3.4rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #ffffff;
+      line-height: 1;
+      margin: 6px 0 10px;
+    }
+
+    .token-stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 14px;
+      margin-top: 12px;
+    }
+
+    .token-stat .val {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--amber);
+    }
+
+    .token-stat .lbl {
+      font-size: 0.72rem;
+      color: #cfd9e8;
+    }
+
+    .confidence-tag {
+      font-size: 0.68rem;
+      background: rgba(42, 157, 143, 0.35);
+      color: #99f6e4;
+      padding: 2px 8px;
+      border-radius: 8px;
+      display: inline-block;
+      margin-top: 6px;
+    }
+
+    .voice-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .voice-btn:hover {
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    /* Free Time Planner */
+    .planner-window {
+      background: #eef8f6;
+      border: 1.5px dashed var(--secondary);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+
+    .free-min-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .free-min-banner .clock-icon {
+      font-size: 2rem;
+    }
+
+    .free-min-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--navy);
+    }
+
+    .activity-chips {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    @media (min-width: 600px) and (max-width: 991px), (min-width: 1200px) {
+      .activity-chips {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .activity-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      border: 1px solid #d8ece8;
+    }
+
+    .act-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+    }
+
+    .act-tag {
+      font-size: 0.7rem;
+      background: #e2e8f0;
+      color: #475569;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* Smart Return Window */
+    .return-box {
+      border: 1px solid #fed7aa;
+      background: #fffaf0;
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 10px;
+      background: #ffedd5;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f4a261, #e76f51);
+      width: 70%;
+      transition: width 0.4s ease;
+    }
+
+    .return-alert-text {
+      font-size: 0.8rem;
+      color: #9a3412;
+      font-weight: 600;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Peer Token Swap */
+    .swap-card {
+      border: 1px solid #e0e7ff;
+      background: #f5f7ff;
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+
+    .swap-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-swap {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-swap:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    /* Grace Banner */
+    .grace-banner {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .grace-banner.active {
+      display: flex;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+
+    /* Organisation Metrics */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    @media (min-width: 600px) {
+      .metric-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .metric-box {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .metric-box .num {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--navy);
+    }
+
+    .metric-box .label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .counter-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.85rem;
+    }
+
+    .counter-badge {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    .status-open { background: var(--green); }
+    .status-busy { background: var(--amber); }
+    .status-closed { background: var(--red); }
+
+    .ai-realloc {
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      border: 1.5px solid #93c5fd;
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+
+    .ai-realloc h4 {
+      font-size: 0.88rem;
+      color: #1e40af;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .ai-realloc p {
+      font-size: 0.8rem;
+      color: #1e3a8a;
+      margin-bottom: 10px;
+    }
+
+    .btn-ai-accept {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Peak hour mini chart */
+    .chart-container {
+      display: flex;
+      align-items: flex-end;
+      height: 120px;
+      gap: 12px;
+      padding-top: 15px;
+      margin-bottom: 10px;
+    }
+
+    .chart-bar-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .chart-bar {
+      width: 100%;
+      max-width: 38px;
+      background: var(--navy-light);
+      border-radius: 6px 6px 0 0;
+      transition: height 0.3s;
+    }
+
+    .chart-bar.highlight {
+      background: var(--secondary);
+    }
+
+    .chart-time {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* SDG Impact cards */
+    .sdg-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    @media (min-width: 480px) {
+      .sdg-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+    }
+
+    .sdg-item {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    .sdg-num {
+      font-size: 0.7rem;
+      font-weight: 800;
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      color: white;
+      margin-bottom: 4px;
+    }
+
+    .sdg-9 { background: #f26a2e; }
+    .sdg-11 { background: #f89d2a; }
+    .sdg-12 { background: #bf8d2c; }
+
+    .sdg-metric {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--navy);
+    }
+
+    .sdg-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* Presentation Demo Bar */
+    .demo-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid #334155;
+      padding: 10px 16px;
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+    }
+
+    .demo-bar-inner {
+      max-width: 1320px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .demo-bar-title {
+      font-size: 0.76rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .demo-buttons {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      max-width: 100%;
+      padding-bottom: 2px;
+    }
+
+    .demo-btn {
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid #475569;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s;
+    }
+
+    .demo-btn:hover {
+      background: #334155;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #1e293b;
+      color: white;
+      border-radius: var(--radius-sm);
+      padding: 12px 18px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      font-size: 0.85rem;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transform: translateY(-80px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      border-left: 4px solid var(--secondary);
+      max-width: 90vw;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Onboarding Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 29, 51, 0.7);
+      backdrop-filter: blur(5px);
+      z-index: 1500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      width: 100%;
+      max-width: 440px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      position: relative;
+    }
+
+    .step-dots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin: 14px 0;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+
+    .dot.active {
+      background: var(--primary);
+      width: 20px;
+      border-radius: 4px;
+    }
+
+    .skip-link {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      margin-top: 12px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <span id="toastIcon">🔔</span>
+    <span id="toastMsg">SmartQueue is active</span>
+  </div>
+
+  <!-- Onboarding Modal -->
+  <div id="onboardingModal" class="modal-overlay">
+    <div class="modal-card">
+      <div style="font-size: 2.4rem; margin-bottom: 10px;" id="obIcon">⏱️</div>
+      <h3 id="obTitle" style="color: var(--navy); margin-bottom: 8px; font-size: 1.2rem;">Don't Wait. Use the Wait.</h3>
+      <p id="obDesc" style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.45;">
+        SmartQueue converts wasted hall-waiting into productive personal time with real-time return alerts & smart queue swaps.
+      </p>
+      <div class="step-dots">
+        <div class="dot active" id="dot1"></div>
+        <div class="dot" id="dot2"></div>
+        <div class="dot" id="dot3"></div>
+      </div>
+      <button class="btn-primary" id="obNextBtn" onclick="nextOnboardingStep()">Next</button>
+      <div><button class="skip-link" onclick="dismissOnboarding()">Skip Overview</button></div>
+    </div>
+  </div>
+
+  <div class="app-shell">
+
+    <!-- Header -->
+    <header>
+      <div class="nav-container">
+        
+        <div class="nav-top-row">
+          <div class="brand-block">
+            <div class="logo-badge">SQ</div>
+            <div class="brand-text">
+              <h1>SmartQueue <span style="font-size: 0.65rem; background: #e0f2f1; color: var(--primary); padding: 2px 6px; border-radius: 4px;">SDG 9•11•12</span></h1>
+              <p>Don't Wait. Use the Wait.</p>
+            </div>
+          </div>
+
+          <div class="meta-tools">
+            <div class="location-pill">
+              <span>🏛️</span>
+              <span id="locName">District Govt Civil Hospital, Vijayawada</span>
+            </div>
+            <div class="trust-pill" title="Civic Trust Score based on on-time arrival">
+              <span>🛡️</span>
+              <span id="trustScoreVal">98 Trust</span>
+            </div>
+            <select id="langSelect" class="lang-select" onchange="changeLanguage(this.value)">
+              <option value="en">English</option>
+              <option value="te">తెలుగు</option>
+              <option value="hi">हिंदी</option>
+            </select>
+            <button class="help-icon-btn" onclick="openOnboarding()" title="Reopen Onboarding Guide">?</button>
+          </div>
+        </div>
+
+        <!-- Role Toggle -->
+        <div class="role-switcher">
+          <button id="roleCitizen" class="role-btn active" onclick="switchRole('citizen')">
+            <span>👤</span> <span id="lblCitizen">Citizen View</span>
+          </button>
+          <button id="roleOrg" class="role-btn" onclick="switchRole('org')">
+            <span>🏢</span> <span id="lblOrg">Organisation View</span>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main>
+
+      <!-- ================= CITIZEN VIEW ================= -->
+      <div id="viewCitizen">
+
+        <!-- Stage 1: Join Queue -->
+        <div id="screenJoin" class="dashboard-grid">
+          
+          <div class="card">
+            <div class="card-title">
+              <span id="lblChooseService">Select Service Category</span>
+              <span style="font-size: 0.72rem; color: var(--green); font-weight: 700;">● Live Counters Active</span>
+            </div>
+
+            <div class="services-grid">
+              <div class="service-card selected" onclick="selectService(this, 'A', 'General OPD • Room 104', 18, 36, 42)">
+                <h4>General OPD</h4>
+                <span>Est. wait: ~20m • ₹0 fee</span>
+              </div>
+              <div class="service-card" onclick="selectService(this, 'S', 'Senior Citizen Express • Room 101', 8, 12, 15)">
+                <h4>Senior Citizen</h4>
+                <span>Dedicated Room 101 • Priority</span>
+              </div>
+              <div class="service-card" onclick="selectService(this, 'E', 'Emergency Triage • Trauma Bay', 2, 4, 5)">
+                <h4>Emergency Triage</h4>
+                <span>Instant slot • Priority Red</span>
+              </div>
+              <div class="service-card" onclick="selectService(this, 'Q', 'Online Pre-Booked • Desk 5', 10, 20, 24)">
+                <h4>Online Appointment</h4>
+                <span>Scan QR / Booking ID</span>
+              </div>
+            </div>
+
+            <button class="btn-primary" onclick="joinQueueAction()">
+              <span>🎟️</span> <span id="lblGetToken">Generate Virtual Token</span>
+            </button>
+          </div>
+
+          <!-- Offline & Accessibility Info -->
+          <div class="card">
+            <div class="card-title">
+              <span>Universal Access & Inclusion</span>
+              <span style="font-size: 0.72rem; color: var(--primary);">No Smartphone Needed</span>
+            </div>
+            <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+              SmartQueue is designed so no citizen is left behind. Click any option below to simulate non-smartphone entry:
+            </p>
+            <div class="offline-box" onclick="simulateOfflineJoin('Missed-Call (1800-425-9988)')">
+              <b>📞 Missed-Call Queueing:</b>
+              <div>Dial <b>1800-425-9988</b> from any phone to receive SMS token & automated IVR callback.</div>
+            </div>
+            <div class="offline-box" style="margin-top: 10px; border-left-color: var(--secondary);" onclick="simulateOfflineJoin('SMS (56767)')">
+              <b>💬 SMS Booking:</b>
+              <div>Send <b>JOIN OPD</b> to <b>56767</b> to reserve your slot remotely from anywhere.</div>
+            </div>
+            <div class="offline-box" style="margin-top: 10px; border-left-color: var(--amber);" onclick="simulateOfflineJoin('Kiosk QR Ticket')">
+              <b>🎫 Multilingual Audio Kiosks:</b>
+              <div>Physical tickets with large printed return times and voice guidance at hospital foyer.</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Stage 2: Live Active Token -->
+        <div id="screenLiveToken" class="hidden">
+          
+          <!-- Missed Turn Grace Banner -->
+          <div id="graceBanner" class="grace-banner">
+            <div>
+              ⚠️ <b>Grace Slot Active!</b> Your token was called. You have <b><span id="graceCountdown">04:59</span></b> to report to Counter 2 before cancellation.
+            </div>
+            <button class="btn-swap" style="background: var(--navy); padding: 6px 12px;" onclick="claimGraceTurn()">Reported at Counter</button>
+          </div>
+
+          <div class="dashboard-grid">
+            
+            <!-- Left: Hero Token + Return Buffer Window -->
+            <div>
+              
+              <!-- Token Hero Card -->
+              <div class="token-hero">
+                <button class="voice-btn" onclick="readAloudToken()" title="Read aloud current token">🔊</button>
+                <div class="badge" id="lblTokenCategory">GENERAL OPD • ROOM 104</div>
+                <div style="font-size: 0.8rem; opacity: 0.9;">YOUR TOKEN NUMBER</div>
+                <div class="my-token-num" id="myTokenId">A-42</div>
+                <div style="font-size: 0.84rem; color: #a7f3d0;" id="tokenStatusText">Position in line: 6 people ahead</div>
+
+                <div class="token-stats-row">
+                  <div class="token-stat">
+                    <div class="val" id="currServing">A-36</div>
+                    <div class="lbl">Now Serving at C-2</div>
+                  </div>
+                  <div class="token-stat">
+                    <div class="val" id="waitMinutes">22 min</div>
+                    <div class="lbl">Predicted Wait Time</div>
+                    <div class="confidence-tag">92% AI Accuracy</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Return Window Box -->
+              <div class="card return-box">
+                <div class="card-title" style="margin-bottom: 8px; color: #9a3412;">
+                  <span>🚶 Smart Return Window</span>
+                  <span id="returnTimeTarget" style="font-size: 0.82rem;">Return by 11:14 AM</span>
+                </div>
+                <div class="slider-label">
+                  <span>3-min walking buffer factored in</span>
+                  <span id="bufferText">Safe return zone</span>
+                </div>
+                <div class="progress-bar-wrap">
+                  <div id="returnProgress" class="progress-fill" style="width: 70%;"></div>
+                </div>
+                <div class="return-alert-text">
+                  <span>🔔</span>
+                  <span id="returnGuidance">Mock push notification triggers 5 mins before Counter 2 calls your token.</span>
+                </div>
+              </div>
+
+              <!-- Peer Swap Card -->
+              <div class="card swap-card">
+                <div class="card-title" style="color: #3730a3; margin-bottom: 8px;">
+                  <span>🤝 Token Swap (Fairness Exchange)</span>
+                  <span style="font-size: 0.72rem; background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 4px;">+20 Karma Pts</span>
+                </div>
+                <p style="font-size: 0.78rem; color: #4338ca; margin-bottom: 12px; line-height: 1.4;">
+                  Not in a hurry? Swap spots with someone with an urgent need, or ask to move forward.
+                </p>
+                <div class="swap-flex">
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--navy);" id="swapPeerName">Ramesh K. (Token A-39)</div>
+                    <div style="font-size: 0.74rem; color: var(--text-muted);" id="swapPeerDesc">Offered swap: moves you +3 turns ahead</div>
+                  </div>
+                  <button id="btnSwapAction" class="btn-swap" onclick="triggerSwapAction()">Accept Swap</button>
+                </div>
+              </div>
+
+              <button style="width: 100%; background: none; border: 1px solid #cbd5e1; color: var(--text-muted); padding: 12px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-top: 4px;" onclick="cancelQueue()">
+                Cancel My Token & Free Capacity
+              </button>
+
+            </div>
+
+            <!-- Right: Free-Time Planner -->
+            <div>
+              <div class="card">
+                <div class="card-title">
+                  <span id="lblFreePlanner">✨ Free-Time Planner</span>
+                  <span id="plannerWindowTag" style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">Window: ~22 Free Minutes</span>
+                </div>
+                
+                <div class="planner-window">
+                  <div class="free-min-banner">
+                    <div class="clock-icon">☕</div>
+                    <div>
+                      <div class="free-min-title" id="freeMinTitle">You have 22 productive minutes!</div>
+                      <div style="font-size: 0.78rem; color: var(--text-muted);">
+                        Spend it nearby instead of standing in crowded hospital corridors:
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="activity-chips">
+                    <div class="activity-item">
+                      <div class="act-left">
+                        <span style="font-size: 1.2rem;">☕</span>
+                        <div>
+                          <div>Annapurna Canteen</div>
+                          <div style="font-size: 0.7rem; color: var(--text-muted);">Tea & Snacks (120m away)</div>
+                        </div>
+                      </div>
+                      <span class="act-tag">8 min</span>
+                    </div>
+
+                    <div class="activity-item">
+                      <div class="act-left">
+                        <span style="font-size: 1.2rem;">⚡</span>
+                        <div>
+                          <div>Pay Power/Utility Bill</div>
+                          <div style="font-size: 0.7rem; color: var(--text-muted);">Civic e-Seva Desk (Room 12)</div>
+                        </div>
+                      </div>
+                      <span class="act-tag">5 min</span>
+                    </div>
+
+                    <div class="activity-item">
+                      <div class="act-left">
+                        <span style="font-size: 1.2rem;">📖</span>
+                        <div>
+                          <div>Health Literacy Micro-Read</div>
+                          <div style="font-size: 0.7rem; color: var(--text-muted);">Diabetes & BP prevention tips</div>
+                        </div>
+                      </div>
+                      <span class="act-tag">10 min</span>
+                    </div>
+
+                    <div class="activity-item">
+                      <div class="act-left">
+                        <span style="font-size: 1.2rem;">🌿</span>
+                        <div>
+                          <div>Courtyard Green Garden</div>
+                          <div style="font-size: 0.7rem; color: var(--text-muted);">Fresh air seating & shade</div>
+                        </div>
+                      </div>
+                      <span class="act-tag">15 min</span>
+                    </div>
+
+                    <div class="activity-item">
+                      <div class="act-left">
+                        <span style="font-size: 1.2rem;">💊</span>
+                        <div>
+                          <div>Jan Aushadhi Kendra</div>
+                          <div style="font-size: 0.7rem; color: var(--text-muted);">Check generic medicine stock</div>
+                        </div>
+                      </div>
+                      <span class="act-tag">7 min</span>
+                    </div>
+
+                    <div class="activity-item">
+                      <div class="act-left">
+                        <span style="font-size: 1.2rem;">🎧</span>
+                        <div>
+                          <div>Guided 5-Min Calm Audio</div>
+                          <div style="font-size: 0.7rem; color: var(--text-muted);">Reduce waiting room stress</div>
+                        </div>
+                      </div>
+                      <span class="act-tag">5 min</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="margin-top: 14px; padding: 12px; background: #f8fafc; border-radius: 8px; font-size: 0.76rem; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
+                  <span>Civic Trust Rating: <b>Tier 1 Verified Citizen</b></span>
+                  <span style="color: var(--green); font-weight: 700;">+10 pts for on-time arrival</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ================= ORGANISATION VIEW ================= -->
+      <div id="viewOrg" class="hidden">
+        
+        <div class="metric-grid">
+          <div class="metric-box">
+            <div class="num" id="orgWaitingCount">28</div>
+            <div class="label">People in Active Queues</div>
+          </div>
+          <div class="metric-box">
+            <div class="num" id="orgAvgWait">14m</div>
+            <div class="label">Average Service Time</div>
+          </div>
+          <div class="metric-box">
+            <div class="num" style="color: var(--green);" id="orgActiveCounters">2 / 4</div>
+            <div class="label">Active Counters Open</div>
+          </div>
+          <div class="metric-box">
+            <div class="num" style="color: var(--primary);">94%</div>
+            <div class="label">On-Time Return Rate</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid org-dashboard-grid">
+          
+          <!-- Column 1: AI Surge & Counter Controls -->
+          <div>
+            <div class="ai-realloc" id="aiReallocBanner">
+              <h4>⚡ AI Surge Reallocation Alert</h4>
+              <p>General OPD queue threshold breached (14 waiting, +4 above SLA). Counter 3 staff is available.</p>
+              <button class="btn-ai-accept" onclick="acceptReallocation()">
+                Open Counter 3 (General OPD)
+              </button>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <span>Counter Allocation (Click status to toggle)</span>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">Interactive Telemetry</span>
+              </div>
+
+              <div class="counter-row">
+                <div>
+                  <span class="counter-badge status-busy" onclick="toggleCounterStatus('c1')"></span>
+                  <b>Counter 1: Dr. Priya Sharma</b>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); padding-left: 18px;">Senior Citizens • Serving S-14</div>
+                </div>
+                <span id="c1Status" style="font-size: 0.76rem; font-weight: 700; color: var(--amber);">Busy (3m)</span>
+              </div>
+
+              <div class="counter-row">
+                <div>
+                  <span class="counter-badge status-open" onclick="toggleCounterStatus('c2')"></span>
+                  <b>Counter 2: Dr. K. Venkatesh</b>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); padding-left: 18px;">General OPD • Serving A-36</div>
+                </div>
+                <span id="c2Status" style="font-size: 0.76rem; font-weight: 700; color: var(--green);">Serving</span>
+              </div>
+
+              <div class="counter-row" id="counter3Row">
+                <div>
+                  <span class="counter-badge status-closed" id="c3Badge" onclick="toggleCounterStatus('c3')"></span>
+                  <b id="c3Name">Counter 3: Staff Standby</b>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); padding-left: 18px;" id="c3Role">General OPD Overflow • Closed</div>
+                </div>
+                <span style="font-size: 0.76rem; font-weight: 700; color: var(--red);" id="c3Status">Closed</span>
+              </div>
+
+              <div class="counter-row">
+                <div>
+                  <span class="counter-badge status-busy" onclick="toggleCounterStatus('c4')"></span>
+                  <b>Counter 4: Triage & Nurse Desk</b>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); padding-left: 18px;">Emergency Priority • Serving E-04</div>
+                </div>
+                <span id="c4Status" style="font-size: 0.76rem; font-weight: 700; color: var(--amber);">Busy</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Peak-Hour Analytics & SDG Impact -->
+          <div>
+            
+            <div class="card">
+              <div class="card-title">
+                <span>Hourly Footfall Heatmap</span>
+                <span style="font-size: 0.72rem; color: var(--green); font-weight: 700;">Best Time: 2:00 PM</span>
+              </div>
+
+              <div class="chart-container">
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" style="height: 35%;"></div>
+                  <span class="chart-time">9 AM</span>
+                </div>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" style="height: 70%;"></div>
+                  <span class="chart-time">10 AM</span>
+                </div>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar highlight" style="height: 95%;"></div>
+                  <span class="chart-time">11 AM</span>
+                </div>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" style="height: 60%;"></div>
+                  <span class="chart-time">12 PM</span>
+                </div>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" style="height: 40%;"></div>
+                  <span class="chart-time">1 PM</span>
+                </div>
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" style="height: 20%; background: #2a9d8f;"></div>
+                  <span class="chart-time">2 PM</span>
+                </div>
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 6px;">
+                💡 <i>Algorithm Suggestion: Shift 4 non-urgent slots from 11:00 AM to 2:15 PM window.</i>
+              </div>
+            </div>
+
+            <div class="card" style="border-top: 4px solid var(--secondary);">
+              <div class="card-title" style="margin-bottom: 6px;">
+                <span>Sustainability & Social Impact</span>
+                <span style="font-size: 0.72rem; color: var(--secondary); font-weight: 700;">SDG 9 • 11 • 12</span>
+              </div>
+              <div class="sdg-grid">
+                <div class="sdg-item">
+                  <div class="sdg-num sdg-9">SDG 9</div>
+                  <div class="sdg-metric">1,840</div>
+                  <div class="sdg-desc">Smart Infra Calls</div>
+                </div>
+                <div class="sdg-item">
+                  <div class="sdg-num sdg-11">SDG 11</div>
+                  <div class="sdg-metric">-41%</div>
+                  <div class="sdg-desc">Corridor Density</div>
+                </div>
+                <div class="sdg-item">
+                  <div class="sdg-num sdg-12">SDG 12</div>
+                  <div class="sdg-metric">4,280</div>
+                  <div class="sdg-desc">Paper Slips Saved</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Pitch Demo Bar -->
+    <div class="demo-bar">
+      <div class="demo-bar-inner">
+        <div class="demo-bar-title">
+          <span>⚡ Demo Pitch Controls</span>
+        </div>
+        <div class="demo-buttons">
+          <button class="demo-btn" onclick="demoCallNext()">⏩ Call Next Token</button>
+          <button class="demo-btn" onclick="demoTriggerSwap()">🤝 Incoming Swap</button>
+          <button class="demo-btn" onclick="demoTriggerGrace()">⏳ Missed Turn Grace</button>
+          <button class="demo-btn" onclick="demoReset()">🔄 Reset Prototype</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /* =====================================================================
+       SMARTQUEUE PROTOTYPE LOGIC (RECHECKED & AUDITED)
+    ===================================================================== */
+
+    const STATE = {
+      role: 'citizen',
+      language: 'en',
+      hasToken: false,
+      tokenPrefix: 'A',
+      tokenNumber: 'A-42',
+      serviceName: 'General OPD • Room 104',
+      servingNumber: 36,
+      myTurnNumber: 42,
+      estMinutes: 22,
+      graceActive: false,
+      counter3Open: false,
+      trustScore: 98,
+      onboardingStep: 1,
+      swapAccepted: false
+    };
+
+    let graceInterval = null;
+    let toastTimeout = null;
+    let clockInterval = null;
+
+    const I18N = {
+      en: {
+        citizen: "Citizen View",
+        org: "Organisation View",
+        chooseService: "Select Service Category",
+        getToken: "Generate Virtual Token",
+        freePlanner: "✨ Free-Time Planner",
+        hospital: "District Govt Civil Hospital, Vijayawada",
+        trust: "Trust",
+        serving: "Now Serving at C-2"
+      },
+      te: {
+        citizen: "పౌరుడు (Citizen)",
+        org: "సంస్థ (Organisation)",
+        chooseService: "సేవా విభాగాన్ని ఎంచుకోండి",
+        getToken: "వర్చువల్ టోకెన్ పొందండి",
+        freePlanner: "✨ ఖాళీ సమయ ప్రణాళిక (Free-Time)",
+        hospital: "జిల్లా ప్రభుత్వ సివిల్ ఆసుపత్రి, విజయవాడ",
+        trust: "విశ్వసనీయత",
+        serving: "కౌంటర్-2 వద్ద ప్రస్తుత టోకెన్"
+      },
+      hi: {
+        citizen: "नागरिक (Citizen)",
+        org: "संस्थान (Organisation)",
+        chooseService: "सेवा श्रेणी चुनें",
+        getToken: "डिजिटल टोकन प्राप्त करें",
+        freePlanner: "✨ खाली समय योजना (Free-Time)",
+        hospital: "जिला सरकारी नागरिक अस्पताल, विजयवाड़ा",
+        trust: "विश्वास स्कोर",
+        serving: "काउंटर-2 पर वर्तमान टोकन"
+      }
+    };
+
+    // Onboarding
+    function openOnboarding() {
+      STATE.onboardingStep = 1;
+      updateOnboardingContent();
+      document.getElementById('onboardingModal').classList.remove('hidden');
+    }
+
+    function dismissOnboarding() {
+      document.getElementById('onboardingModal').classList.add('hidden');
+    }
+
+    function updateOnboardingContent() {
+      const icon = document.getElementById('obIcon');
+      const title = document.getElementById('obTitle');
+      const desc = document.getElementById('obDesc');
+      const dot1 = document.getElementById('dot1');
+      const dot2 = document.getElementById('dot2');
+      const dot3 = document.getElementById('dot3');
+      const btn = document.getElementById('obNextBtn');
+
+      dot1.classList.remove('active');
+      dot2.classList.remove('active');
+      dot3.classList.remove('active');
+
+      if (STATE.onboardingStep === 1) {
+        icon.innerText = "⏱️";
+        title.innerText = "Don't Wait. Use the Wait.";
+        desc.innerText = "SmartQueue converts wasted hall-waiting into productive personal time with real-time return alerts & smart queue swaps.";
+        dot1.classList.add('active');
+        btn.innerText = "Next";
+      } else if (STATE.onboardingStep === 2) {
+        icon.innerText = "☕";
+        title.innerText = "Use the Wait Anywhere";
+        desc.innerText = "Get micro-activity recommendations that fit into your exact wait window with built-in walking buffer.";
+        dot2.classList.add('active');
+        btn.innerText = "Next";
+      } else if (STATE.onboardingStep === 3) {
+        icon.innerText = "🤝";
+        title.innerText = "Peer Swap & Grace Slots";
+        desc.innerText = "Trade queue spots with fellow citizens, earn Karma points, and never lose your turn with 5-minute grace.";
+        dot3.classList.add('active');
+        btn.innerText = "Start Experience";
+      }
+    }
+
+    function nextOnboardingStep() {
+      if (STATE.onboardingStep < 3) {
+        STATE.onboardingStep++;
+        updateOnboardingContent();
+      } else {
+        dismissOnboarding();
+        showToast("💡 Pro-tip: Use the bottom Demo Bar for quick pitch interactions!");
+      }
+    }
+
+    // Language Toggle
+    function changeLanguage(lang) {
+      STATE.language = lang;
+      const dict = I18N[lang] || I18N.en;
+      document.getElementById('lblCitizen').innerText = dict.citizen;
+      document.getElementById('lblOrg').innerText = dict.org;
+      document.getElementById('lblChooseService').innerText = dict.chooseService;
+      document.getElementById('lblGetToken').innerText = dict.getToken;
+      document.getElementById('lblFreePlanner').innerText = dict.freePlanner;
+      document.getElementById('locName').innerText = dict.hospital;
+      document.getElementById('trustScoreVal').innerText = `${STATE.trustScore} ${dict.trust}`;
+      showToast(`Language switched to ${lang === 'te' ? 'తెలుగు' : lang === 'hi' ? 'हिंदी' : 'English'}`);
+    }
+
+    // Role Switcher
+    function switchRole(role) {
+      STATE.role = role;
+      document.getElementById('roleCitizen').classList.toggle('active', role === 'citizen');
+      document.getElementById('roleOrg').classList.toggle('active', role === 'org');
+      document.getElementById('viewCitizen').classList.toggle('hidden', role !== 'citizen');
+      document.getElementById('viewOrg').classList.toggle('hidden', role !== 'org');
+    }
+
+    // Select Service Category
+    function selectService(elem, prefix, name, waitMins, serving, myTurn) {
+      document.querySelectorAll('.service-card').forEach(el => el.classList.remove('selected'));
+      elem.classList.add('selected');
+      STATE.tokenPrefix = prefix;
+      STATE.serviceName = name;
+      STATE.estMinutes = waitMins;
+      STATE.servingNumber = serving;
+      STATE.myTurnNumber = myTurn;
+      STATE.tokenNumber = `${prefix}-${myTurn}`;
+    }
+
+    // Join Queue Action
+    function joinQueueAction() {
+      STATE.hasToken = true;
+      document.getElementById('screenJoin').classList.add('hidden');
+      document.getElementById('screenLiveToken').classList.remove('hidden');
+      document.getElementById('lblTokenCategory').innerText = STATE.serviceName.toUpperCase();
+      updateCitizenDisplays();
+      showToast(`🎟️ Token ${STATE.tokenNumber} issued! Return notifications active.`);
+    }
+
+    // Offline Join Simulation
+    function simulateOfflineJoin(method) {
+      selectService(document.querySelector('.service-card.selected'), 'A', 'General OPD • Room 104', 18, 36, 42);
+      joinQueueAction();
+      showToast(`📱 Simulated Offline Token issued via ${method}!`);
+    }
+
+    // Cancel Queue
+    function cancelQueue() {
+      STATE.hasToken = false;
+      document.getElementById('screenLiveToken').classList.add('hidden');
+      document.getElementById('screenJoin').classList.remove('hidden');
+      if (graceInterval) {
+        clearInterval(graceInterval);
+        graceInterval = null;
+      }
+      document.getElementById('graceBanner').classList.remove('active');
+      showToast("Token canceled. Capacity freed for other citizens.");
+    }
+
+    // Update Citizen Displays
+    function updateCitizenDisplays() {
+      const ahead = STATE.myTurnNumber - STATE.servingNumber;
+      document.getElementById('currServing').innerText = `${STATE.tokenPrefix}-${STATE.servingNumber}`;
+      document.getElementById('myTokenId').innerText = STATE.tokenNumber;
+
+      const waitBadge = document.getElementById('waitMinutes');
+      const returnTimeLabel = document.getElementById('returnTimeTarget');
+      const progress = document.getElementById('returnProgress');
+      const returnGuidance = document.getElementById('returnGuidance');
+      const plannerTag = document.getElementById('plannerWindowTag');
+      const freeTitle = document.getElementById('freeMinTitle');
+
+      if (ahead > 0) {
+        const estRemaining = Math.max(2, Math.round(ahead * 3.5));
+        waitBadge.innerText = `${estRemaining} min`;
+        waitBadge.style.color = "var(--amber)";
+        document.getElementById('tokenStatusText').innerText = `Position in line: ${ahead} person${ahead > 1 ? 's' : ''} ahead`;
+        
+        const now = new Date();
+        const returnTime = new Date(now.getTime() + Math.max(1, estRemaining - 3) * 60000);
+        const hours = returnTime.getHours() % 12 || 12;
+        const minutes = returnTime.getMinutes().toString().padStart(2, '0');
+        const ampm = returnTime.getHours() >= 12 ? 'PM' : 'AM';
+        returnTimeLabel.innerText = `Return by ${hours}:${minutes} ${ampm}`;
+        
+        const pct = Math.min(100, Math.max(15, Math.round((ahead / 6) * 100)));
+        if (progress) progress.style.width = `${pct}%`;
+        returnGuidance.innerText = `Mock push will buzz phone 5 mins before Counter 2 calls ${STATE.tokenNumber}.`;
+
+        if (plannerTag) plannerTag.innerText = `Window: ~${estRemaining} Free Minutes`;
+        if (freeTitle) freeTitle.innerText = `You have ${estRemaining} productive minutes!`;
+      } else {
+        // It is the user's turn
+        waitBadge.innerText = `0 min (NOW)`;
+        waitBadge.style.color = "var(--green)";
+        document.getElementById('tokenStatusText').innerText = `🚨 IT'S YOUR TURN! Report to Counter 2`;
+        returnTimeLabel.innerText = `REPORT IMMEDIATELY`;
+        if (progress) progress.style.width = `100%`;
+        returnGuidance.innerText = `🔔 Attention: Token ${STATE.tokenNumber} is being called now at Counter 2.`;
+        if (plannerTag) plannerTag.innerText = `Window Expired`;
+        if (freeTitle) freeTitle.innerText = `Your turn has arrived!`;
+      }
+    }
+
+    // Voice Accessibility
+    function readAloudToken() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const ahead = STATE.myTurnNumber - STATE.servingNumber;
+        const msg = ahead <= 0
+          ? `Attention. Token ${STATE.tokenNumber}, please report to Counter 2 immediately.`
+          : `Attention please. Now serving token ${STATE.tokenPrefix} ${STATE.servingNumber} at Counter 2. Your token is ${STATE.tokenNumber}. You have ${ahead} people ahead.`;
+        
+        const utter = new SpeechSynthesisUtterance(msg);
+        utter.rate = 0.95;
+        if (STATE.language === 'hi') utter.lang = 'hi-IN';
+        else if (STATE.language === 'te') utter.lang = 'te-IN';
+        else utter.lang = 'en-IN';
+
+        window.speechSynthesis.speak(utter);
+        showToast("🔊 Playing accessibility announcement...");
+      } else {
+        showToast("🔊 Speech not supported on this browser.");
+      }
+    }
+
+    // Toast with debounce
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.add('show');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3400);
+    }
+
+    // Peer Token Swap
+    function triggerSwapAction() {
+      if (STATE.swapAccepted) return;
+      STATE.swapAccepted = true;
+      STATE.tokenNumber = `${STATE.tokenPrefix}-39`;
+      STATE.myTurnNumber = 39;
+      STATE.trustScore += 20;
+      document.getElementById('trustScoreVal').innerText = `${STATE.trustScore} Trust`;
+      
+      const btn = document.getElementById('btnSwapAction');
+      btn.innerText = "Swapped ✅";
+      btn.disabled = true;
+      document.getElementById('swapPeerDesc').innerText = "Swap executed: position updated!";
+      
+      updateCitizenDisplays();
+      showToast("🎉 Swap confirmed with Ramesh K.! You are now Token A-39 (+20 Karma Pts).");
+    }
+
+    // AI Reallocation
+    function acceptReallocation() {
+      STATE.counter3Open = true;
+      document.getElementById('aiReallocBanner').style.display = 'none';
+      document.getElementById('c3Badge').className = 'counter-badge status-open';
+      document.getElementById('c3Name').innerText = 'Counter 3: Dr. Anita Rao';
+      document.getElementById('c3Role').innerText = 'General OPD Overflow • Serving A-37';
+      document.getElementById('c3Status').innerText = 'Open';
+      document.getElementById('c3Status').style.color = 'var(--green)';
+      document.getElementById('orgActiveCounters').innerText = '3 / 4';
+      document.getElementById('orgAvgWait').innerText = '9m';
+      showToast("✅ Counter 3 opened! Queue wait time reduced by 35%.");
+    }
+
+    // Interactive Counter Clicker in Org View
+    function toggleCounterStatus(counterId) {
+      if (counterId === 'c1') {
+        const el = document.getElementById('c1Status');
+        const badge = el.previousElementSibling.querySelector('.counter-badge');
+        if (el.innerText.includes('Busy')) {
+          el.innerText = 'Serving';
+          el.style.color = 'var(--green)';
+          badge.className = 'counter-badge status-open';
+        } else {
+          el.innerText = 'Busy (2m)';
+          el.style.color = 'var(--amber)';
+          badge.className = 'counter-badge status-busy';
+        }
+      } else if (counterId === 'c3') {
+        acceptReallocation();
+      }
+    }
+
+    // Grace Period Logic
+    function demoTriggerGrace() {
+      if (!STATE.hasToken) joinQueueAction();
+      STATE.graceActive = true;
+      const banner = document.getElementById('graceBanner');
+      banner.classList.add('active');
+      banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      if (graceInterval) clearInterval(graceInterval);
+
+      let secLeft = 299;
+      graceInterval = setInterval(() => {
+        secLeft--;
+        const m = Math.floor(secLeft / 60).toString().padStart(2, '0');
+        const s = (secLeft % 60).toString().padStart(2, '0');
+        const badge = document.getElementById('graceCountdown');
+        if (badge) badge.innerText = `${m}:${s}`;
+        if (secLeft <= 0 || !STATE.graceActive) {
+          clearInterval(graceInterval);
+          graceInterval = null;
+        }
+      }, 1000);
+
+      showToast("⏳ Missed Turn! 5-minute grace window active.");
+    }
+
+    function claimGraceTurn() {
+      STATE.graceActive = false;
+      if (graceInterval) {
+        clearInterval(graceInterval);
+        graceInterval = null;
+      }
+      document.getElementById('graceBanner').classList.remove('active');
+      showToast("✅ Welcome back! Your token has been checked-in with the doctor.");
+    }
+
+    // Demo Controls
+    function demoCallNext() {
+      if (!STATE.hasToken) joinQueueAction();
+      if (STATE.servingNumber < STATE.myTurnNumber) {
+        STATE.servingNumber++;
+        updateCitizenDisplays();
+        showToast(`📢 Token called: ${STATE.tokenPrefix}-${STATE.servingNumber} at Counter 2`);
+
+        if (STATE.servingNumber === STATE.myTurnNumber) {
+          showToast(`🚨 IT'S YOUR TURN! Report to Counter 2 with Token ${STATE.tokenNumber}`);
+          readAloudToken();
+        }
+      } else {
+        showToast("Queue has already reached your token.");
+      }
+    }
+
+    function demoTriggerSwap() {
+      if (!STATE.hasToken) joinQueueAction();
+      STATE.swapAccepted = false;
+      const btn = document.getElementById('btnSwapAction');
+      btn.innerText = "Accept Swap";
+      btn.disabled = false;
+      document.getElementById('swapPeerDesc').innerText = "Offered swap: moves you +3 turns ahead";
+      showToast("📩 Peer Swap Request: Ramesh K. (Token A-39) wants to swap!");
+      document.querySelector('.swap-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function demoReset() {
+      if (graceInterval) {
+        clearInterval(graceInterval);
+        graceInterval = null;
+      }
+      STATE.tokenPrefix = 'A';
+      STATE.servingNumber = 36;
+      STATE.myTurnNumber = 42;
+      STATE.tokenNumber = 'A-42';
+      STATE.serviceName = 'General OPD • Room 104';
+      STATE.trustScore = 98;
+      STATE.graceActive = false;
+      STATE.counter3Open = false;
+      STATE.swapAccepted = false;
+
+      document.getElementById('graceBanner').classList.remove('active');
+      document.getElementById('aiReallocBanner').style.display = 'block';
+      document.getElementById('c3Badge').className = 'counter-badge status-closed';
+      document.getElementById('c3Name').innerText = 'Counter 3: Staff Standby';
+      document.getElementById('c3Role').innerText = 'General OPD Overflow • Closed';
+      document.getElementById('c3Status').innerText = 'Closed';
+      document.getElementById('c3Status').style.color = 'var(--red)';
+      document.getElementById('orgActiveCounters').innerText = '2 / 4';
+      document.getElementById('orgAvgWait').innerText = '14m';
+      document.getElementById('trustScoreVal').innerText = '98 Trust';
+
+      const btn = document.getElementById('btnSwapAction');
+      btn.innerText = "Accept Swap";
+      btn.disabled = false;
+
+      joinQueueAction();
+      showToast("🔄 Prototype reset to initial demo parameters.");
+    }
+  </script>
+</body>
+</html>

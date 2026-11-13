@@ -1,0 +1,8 @@
+{
+  "name": "Remix SmartQueue",
+  "description": "Digital queue management system with virtual tokens, real-time wait prediction, counter allocation, and peak-hour analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
