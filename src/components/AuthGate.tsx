@@ -215,6 +215,11 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthenticated }) => {
           setError('Google sign-in popup was closed before completing authentication.');
         } else if (code === 'auth/popup-blocked') {
           setError('Popup was blocked by your browser. Please allow popups and try again.');
+        } else if (code === 'auth/unauthorized-domain') {
+          const host = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+          setError(
+            `Domain "${host}" is not authorized in Firebase Authentication. Add "${host}" under Firebase Console → Authentication → Settings → Authorized domains.`
+          );
         } else {
           setError(err instanceof Error ? err.message : 'Google authentication failed.');
         }
