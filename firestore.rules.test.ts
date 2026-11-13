@@ -28,9 +28,10 @@ const dirtyDozenAssertions: Array<{ name: string; check: () => void }> = [
     },
   },
   {
-    name: '4. Unverified email spoof blocked via email_verified == true',
+    name: '4. Unverified email spoof blocked via email_verified == true and owner emails authorized',
     check: () => {
       assert.match(rulesText, /request\.auth\.token\.email_verified == true/);
+      assert.match(rulesText, /nallashashikaran42@gmail\.com/);
     },
   },
   {

@@ -144,7 +144,10 @@ authRoutes.post('/login', (req, res) => {
   });
 });
 
-const BOOTSTRAPPED_ADMIN_EMAIL = 'shahsikarnann@gmail.com';
+const BOOTSTRAPPED_ADMIN_EMAILS = new Set([
+  'shahsikarnann@gmail.com',
+  'nallashashikaran42@gmail.com',
+]);
 
 authRoutes.post('/firebase-google', async (req, res) => {
   const { idToken, expectedRole } = (req.body || {}) as {
@@ -235,7 +238,9 @@ authRoutes.post('/firebase-google', async (req, res) => {
     return;
   }
 
-  if (requestedRole === 'admin' && verified.email !== BOOTSTRAPPED_ADMIN_EMAIL) {
+  const isWhitelistedAdminEmail = BOOTSTRAPPED_ADMIN_EMAILS.has(verified.email.toLowerCase());
+
+  if (requestedRole === 'admin' && !isWhitelistedAdminEmail) {
     res.status(403).json({
       error:
         'No Administrator account is provisioned for this Google email. Public registration is disabled for administrative access.',
@@ -243,8 +248,7 @@ authRoutes.post('/firebase-google', async (req, res) => {
     return;
   }
 
-  const isBootstrappedAdmin =
-    requestedRole === 'admin' && verified.email === BOOTSTRAPPED_ADMIN_EMAIL;
+  const isBootstrappedAdmin = requestedRole === 'admin' && isWhitelistedAdminEmail;
 
   const displayName =
     verified.name && verified.name.trim().length > 0

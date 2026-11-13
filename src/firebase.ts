@@ -115,8 +115,10 @@ export async function syncUserToFirestore(
   try {
     const existingSnap = await getDoc(userRef);
     if (!existingSnap.exists()) {
+      const normalizedEmail = firebaseUser.email?.toLowerCase() || '';
       const isOwnerAdmin =
-        firebaseUser.email?.toLowerCase() === 'shahsikarnann@gmail.com' &&
+        (normalizedEmail === 'shahsikarnann@gmail.com' ||
+          normalizedEmail === 'nallashashikaran42@gmail.com') &&
         firebaseUser.emailVerified &&
         appUser.role === 'admin';
 
